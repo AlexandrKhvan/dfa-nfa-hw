@@ -73,45 +73,38 @@ class CodeGenerator:
 
     def generate(self, node):
         if node.type == 'char':
-            idx = self.new_instruction('char', node.value)
-            return idx
+            self.new_instruction('char', node.value)
         elif node.type == 'concat':
             self.generate(node.left)
             self.generate(node.right)
         elif node.type == '|':
             split_idx = self.new_instruction('split', None, None)
-            idx1 = len(self.instructions)
             self.generate(node.left)
             jmp_idx = self.new_instruction('jmp', None)
-            idx2 = len(self.instructions)
+            self.instructions[split_idx].arg1 = split_idx + 1
+            self.instructions[split_idx].arg2 = len(self.instructions)
             self.generate(node.right)
-            next_idx = len(self.instructions)
-            self.instructions[split_idx].arg1 = idx1
-            self.instructions[split_idx].arg2 = idx2
-            self.instructions[jmp_idx].arg1 = next_idx
+            self.instructions[jmp_idx].arg1 = len(self.instructions)
         elif node.type == '*':
-            l1_idx = len(self.instructions)
+            start_idx = len(self.instructions)
             split_idx = self.new_instruction('split', None, None)
-            l2_idx = len(self.instructions)
+            self.instructions[split_idx].arg1 = split_idx + 1
+            self.instructions[split_idx].arg2 = None  # Will be set later
             self.generate(node.left)
-            self.new_instruction('jmp', l1_idx)
-            l3_idx = len(self.instructions)
-            self.instructions[split_idx].arg1 = l2_idx
-            self.instructions[split_idx].arg2 = l3_idx
+            self.new_instruction('jmp', start_idx)
+            self.instructions[split_idx].arg2 = len(self.instructions)
         elif node.type == '+':
-            l1_idx = len(self.instructions)
+            start_idx = len(self.instructions)
             self.generate(node.left)
-            split_idx = self.new_instruction('split', l1_idx, len(self.instructions) + 1)
+            split_idx = self.new_instruction('split', start_idx, len(self.instructions) + 1)
         elif node.type == '?':
             split_idx = self.new_instruction('split', None, None)
-            l1_idx = len(self.instructions)
+            self.instructions[split_idx].arg1 = split_idx + 1
+            self.instructions[split_idx].arg2 = None  # Will be set later
             self.generate(node.left)
-            l2_idx = len(self.instructions)
-            self.instructions[split_idx].arg1 = l1_idx
-            self.instructions[split_idx].arg2 = l2_idx
+            self.instructions[split_idx].arg2 = len(self.instructions)
         else:
             raise Exception('Unknown node type: ' + node.type)
-
 
 def run_vm(instructions, input_string):
     states = [(0, 0)]
@@ -124,23 +117,18 @@ def run_vm(instructions, input_string):
                 continue
             if pc >= len(instructions):
                 continue
+            visited.add((pc, idx))
             instr = instructions[pc]
             if instr.op == 'char':
-                if idx >= input_len or input_string[idx] != instr.arg1:
-                    continue
-                else:
+                if idx < input_len and input_string[idx] == instr.arg1:
                     new_states.append((pc + 1, idx + 1))
             elif instr.op == 'match':
                 if idx == input_len:
                     return True
-                else:
-                    continue
             elif instr.op == 'jmp':
                 new_states.append((instr.arg1, idx))
             elif instr.op == 'split':
                 new_states.append((instr.arg1, idx))
                 new_states.append((instr.arg2, idx))
-            else:
-                raise Exception('Unknown instruction: ' + instr.op)
         states = new_states
     return False
