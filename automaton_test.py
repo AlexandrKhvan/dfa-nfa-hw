@@ -116,7 +116,8 @@ class TestAutomaton(unittest.TestCase):
         dfa_all.fill_accepted_list([0])
         dfa_all.fill_transitions_list(0, 0, 0)
         dfa_all.fill_transitions_list(0, 0, 1)
-        self.assertTrue(dfa_all.accepts_all())
+        minimized_dfa_all=dfa_all.minimize()
+        self.assertTrue(minimized_dfa_all.accepts_all())
 
         dfa_not_all = DFA(2, 2)
         dfa_not_all.fill_start_list(0)
@@ -125,7 +126,8 @@ class TestAutomaton(unittest.TestCase):
         dfa_not_all.fill_transitions_list(0, 0, 1)
         dfa_not_all.fill_transitions_list(1, 1, 0)
         dfa_not_all.fill_transitions_list(1, 1, 1)
-        self.assertFalse(dfa_not_all.accepts_all())
+        minimized_dfa_not_all = dfa_not_all.minimize()
+        self.assertFalse(minimized_dfa_not_all.accepts_all())
 
 if __name__ == '__main__':
     unittest.main()
